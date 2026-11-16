@@ -48,3 +48,4 @@ make deploy KUBE_CONTEXT=<ctx>
 - [alpn-routing]: on TLS the mux gives h2 only to clients that do NOT offer http/1.1; browsers offer both and would otherwise land on the gRPC server and get a 415.
 - [flatcar-docker]: Flatcar's docker is socket-activated; restart policies do nothing after reboot until `systemctl enable --now docker.service`.
 - [distroless-volume]: the image ships `/app/data` owned by 65532, because a fresh Docker volume copies the mount point's ownership and distroless has no shell to chown with.
+- [go-patch-pin]: CI's setup-go installs exactly the `go` line in go.mod, so a stale patch (1.26.1) ships every stdlib CVE fixed since and fails govulncheck. Keep the `go` directive on the latest patch; check `govulncheck` by exit code (3 = affected), not by reading its tail.

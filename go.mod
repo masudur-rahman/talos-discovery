@@ -1,6 +1,6 @@
 module github.com/masudur-rahman/talos-discovery
 
-go 1.26.1
+go 1.26.11
 
 require (
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus v1.1.1
