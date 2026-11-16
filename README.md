@@ -39,6 +39,7 @@ One port serves both protocols. With TLS, a client that offers `http/1.1` in ALP
 ```bash
 make run                      # plaintext on :3000, snapshots in ./data
 docker compose -f deploy/compose/docker-compose.yml up -d    # see deploy/compose
+docker compose -f deploy/compose/docker-compose.nginx.yml up -d  # behind nginx on 443
 make deploy KUBE_CONTEXT=...  # Kubernetes; see deploy/k8s
 ```
 

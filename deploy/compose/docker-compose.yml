@@ -1,18 +1,13 @@
-# The service on one host, e.g. a Flatcar VM. Two ways to run it:
+# The service on one host, e.g. a Flatcar VM, with Talos nodes connecting to it
+# directly: no proxy in front.
 #
-#   Direct (default): nodes connect to <host>:3000. Point Talos at
-#   http://<host>:3000/, or give the server a certificate (see below) and use
-#   https://<host>:3000/.
-#     docker compose -f deploy/compose/docker-compose.yml up -d
+#   docker compose -f deploy/compose/docker-compose.yml up -d
 #
-#   Behind nginx: nginx terminates TLS on 443 and passes the client address on.
-#   Put the certificate at deploy/compose/tls/tls.crt and tls.key, then:
-#     TRUST_X_REAL_IP=true BIND=127.0.0.1 \
-#       docker compose -f deploy/compose/docker-compose.yml --profile nginx up -d
-#   BIND=127.0.0.1 matters: with the header trusted, anyone who can reach port
-#   3000 directly could claim any address.
+# Point Talos at http://<host>:3000/. For TLS, give the server a certificate
+# (the commented lines below) and use https://<host>:3000/ instead.
+# Behind nginx, use docker-compose.nginx.yml instead.
 #
-# Variables can also go in deploy/compose/.env; see .env.example there.
+# Variables can go in deploy/compose/.env; see .env.example there.
 # Upgrade: set TAG to the new release, then `docker compose ... pull && up -d`.
 services:
   talos-discovery:
@@ -20,10 +15,18 @@ services:
     # (deploy/compose/.env) rather than following latest on a server.
     image: ghcr.io/masudur-rahman/talos-discovery:${TAG:-latest}
     restart: unless-stopped
+    # The server drains for up to 10 s on SIGTERM, then writes its final
+    # snapshot. Docker's default 10 s would kill it before that write.
+    stop_grace_period: 20s
     environment:
-      TALOS_DISCOVERY_TRUST_X_REAL_IP: ${TRUST_X_REAL_IP:-false}
+      # Nodes reach the server directly, so no header can be trusted to carry
+      # their address: anyone could send one and set their own KubeSpan public
+      # IP. The TCP source address is used instead.
+      TALOS_DISCOVERY_TRUST_X_REAL_IP: "false"
+      TALOS_DISCOVERY_TRUST_X_FORWARDED_FOR: "false"
       TALOS_DISCOVERY_LOG_FORMAT: json
-      # For TLS on the server itself, mount the files and set:
+      # TLS on the server itself: mount the files below and uncomment.
+      # Certificates are re-read on renewal, no restart needed.
       # TALOS_DISCOVERY_TLS_CERT_FILE: /tls/tls.crt
       # TALOS_DISCOVERY_TLS_KEY_FILE: /tls/tls.key
     volumes:
@@ -31,21 +34,26 @@ services:
       - discovery-data:/app/data
       # - ./tls:/tls:ro
     ports:
-      - "${BIND:-0.0.0.0}:3000:3000"   # gRPC for the nodes, plus the site
-      - "127.0.0.1:3001:3001"          # landing page and /healthz
-      - "${METRICS_BIND:-127.0.0.1}:2122:2122"  # Prometheus; open it to your Prometheus host only
-
-  nginx:
-    profiles: ["nginx"]
-    image: nginx:1.27-alpine
-    restart: unless-stopped
-    depends_on:
-      - talos-discovery
-    ports:
-      - "443:443"
-    volumes:
-      - ../nginx/talos-discovery.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./tls:/etc/nginx/tls:ro
+      # gRPC for the nodes, plus the landing page, /inspect and /stats.
+      - "3000:3000"
+      # The same pages and /healthz on their own port; local only.
+      - "127.0.0.1:3001:3001"
+      # Prometheus. Set METRICS_BIND to an address your Prometheus can reach,
+      # or leave it on loopback and scrape from the VM.
+      - "${METRICS_BIND:-127.0.0.1}:2122:2122"
+    # Hello hands each node the source address the server sees, and KubeSpan
+    # uses it as the node's public IP. Docker's published ports keep the real
+    # IPv4 source, but IPv6 clients go through docker-proxy and arrive from the
+    # bridge gateway unless the daemon has ip6tables on. For IPv6 nodes, use
+    # host networking instead: uncomment this and drop `ports:` above.
+    # network_mode: host
+    logging:
+      # json-file grows without limit by default, and every failed request is
+      # a log line.
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 volumes:
   # The image ships /app/data owned by nonroot (65532), and a new named volume
