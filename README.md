@@ -134,6 +134,23 @@ The same limits as the public service: 1024 affiliates per cluster, 64 endpoints
 | pprof | debug builds only | any build, off unless `debugAddr` is set | Available when needed without a rebuild. |
 | Snapshot path | `/var/discovery-service/state.binpb` | `data/state.binpb` (`/app/data/` in the image) | Relative to the working directory, so it works as nonroot in the image and in a checkout. |
 
+## Releases
+
+CI (`.github/workflows/ci.yml`) runs tests, lint, govulncheck and a two-platform image build on every pull request and push to `main`. Images are published from tags only:
+
+```bash
+git tag -a v0.1.0 -m v0.1.0
+git push origin v0.1.0
+```
+
+The Release workflow then pushes `ghcr.io/masudur-rahman/talos-discovery:v0.1.0` and `:latest` for linux/amd64 and linux/arm64. It logs in with the `GH_TOKEN` repository secret, a token with `write:packages`.
+
+A new package on ghcr starts private. Either make it public once (the package's settings, Change visibility), or log the VM in with a token that has `read:packages`:
+
+```bash
+echo <token> | docker login ghcr.io -u masudur-rahman --password-stdin
+```
+
 ## Development
 
 ```bash

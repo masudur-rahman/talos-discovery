@@ -13,11 +13,12 @@
 #   3000 directly could claim any address.
 #
 # Variables can also go in deploy/compose/.env; see .env.example there.
+# Upgrade: set TAG to the new release, then `docker compose ... pull && up -d`.
 services:
   talos-discovery:
-    build:
-      context: ../..
-    image: ghcr.io/masudur-rahman/talos-discovery:latest
+    # Published by the Release workflow on every tag. Pin a version with TAG
+    # (deploy/compose/.env) rather than following latest on a server.
+    image: ghcr.io/masudur-rahman/talos-discovery:${TAG:-latest}
     restart: unless-stopped
     environment:
       TALOS_DISCOVERY_TRUST_X_REAL_IP: ${TRUST_X_REAL_IP:-false}

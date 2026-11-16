@@ -123,8 +123,8 @@ docker-run: # @HELP runs the container built from the latest changes, plaintext 
 	  $(DOCKER_IMAGE):$(VERSION)
 
 .PHONY: docker-compose-up
-docker-compose-up: # @HELP runs the server behind nginx via Docker Compose
-	docker compose -f deploy/compose/docker-compose.yml up --build
+docker-compose-up: # @HELP runs the image built by docker-build via Docker Compose
+	TAG=$(VERSION) docker compose -f deploy/compose/docker-compose.yml up
 
 .PHONY: docker-build-push
 docker-build-push: # @HELP builds and pushes a multi-arch image; HEAD must sit on a tag

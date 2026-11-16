@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*.*"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # git describe feeds the image tag
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      # A tag is cut from main, which CI has already checked; this is the last
+      # gate before an image the VM will pull.
+      - name: Run tests
+        run: go test -race -count=1 ./...
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Expose GitHub Actions cache to buildx
+        uses: crazy-max/ghaction-github-runtime@v4
+
+      # GitHub Container Registry only. `make release` refuses unless HEAD sits
+      # on a tag, and pushes <tag> and latest for amd64 and arm64.
+      - name: Publish Docker image to GitHub Container Registry
+        env:
+          REGISTRY: ghcr.io/masudur-rahman
+          DOCKER_TOKEN: ${{ secrets.GH_TOKEN }}
+          USERNAME: masudur-rahman
+          DOCKER_CACHE_ARGS: --cache-from type=gha,scope=app --cache-to type=gha,mode=max,scope=app
+        run: |
+          echo "${DOCKER_TOKEN}" | docker login ghcr.io --username "${USERNAME}" --password-stdin
+          make release
