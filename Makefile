@@ -21,6 +21,15 @@ ifdef git_tag
 endif
 
 DOCKER_IMAGE := $(REGISTRY)/$(BIN)
+
+# A multi-arch push is an image index, and ghcr links the package to its repo
+# (and shows its description) from the index's annotations only. The Dockerfile
+# LABELs land in each per-platform image, where ghcr never looks.
+IMAGE_SOURCE      := https://github.com/masudur-rahman/talos-discovery
+IMAGE_ANNOTATIONS := \
+	--annotation "index:org.opencontainers.image.source=$(IMAGE_SOURCE)" \
+	--annotation "index:org.opencontainers.image.description=Self-hosted discovery service for Talos Linux clusters" \
+	--annotation "index:org.opencontainers.image.version=$(VERSION)"
 GO_VERSION   ?= 1.26
 
 # Passed through to buildx by CI; empty for a local build.
@@ -139,6 +148,7 @@ docker-build-push: # @HELP builds and pushes a multi-arch image; HEAD must sit o
 	  --build-arg BUILD_DATE=$(commit_timestamp) \
 	  --build-arg GIT_COMMIT=$(commit_hash) \
 	  $(DOCKER_CACHE_ARGS) \
+	  $(IMAGE_ANNOTATIONS) \
 	  --output "type=image,push=true" \
 	  --tag $(DOCKER_IMAGE):$(VERSION) \
 	  --tag $(DOCKER_IMAGE):latest \
