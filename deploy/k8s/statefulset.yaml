@@ -1,0 +1,107 @@
+# One replica, always. The state lives in this process's memory and is not
+# shared, so a second replica would split every cluster in two: nodes that
+# landed on different pods would never see each other.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: talos-discovery
+  namespace: talos-discovery
+  labels:
+    app.kubernetes.io/name: talos-discovery
+spec:
+  replicas: 1
+  serviceName: talos-discovery
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: talos-discovery
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: talos-discovery
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "2122"
+        prometheus.io/path: /metrics
+    spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: talos-discovery
+          image: ghcr.io/masudur-rahman/talos-discovery:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grpc
+              containerPort: 3000
+            - name: landing
+              containerPort: 3001
+            - name: metrics
+              containerPort: 2122
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: landing
+            periodSeconds: 5
+          # The kubelet's gRPC probe is plaintext only. If the server is given
+          # its own certificate, switch this to httpGet /healthz on landing.
+          livenessProbe:
+            grpc:
+              port: 3000
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: config
+              mountPath: /app/.configs
+              readOnly: true
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: config
+          configMap:
+            name: talos-discovery
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: talos-discovery
+  namespace: talos-discovery
+  labels:
+    app.kubernetes.io/name: talos-discovery
+spec:
+  selector:
+    app.kubernetes.io/name: talos-discovery
+  ports:
+    - name: grpc
+      port: 3000
+      targetPort: grpc
+      appProtocol: kubernetes.io/h2c
+    - name: landing
+      port: 3001
+      targetPort: landing
+    - name: metrics
+      port: 2122
+      targetPort: metrics

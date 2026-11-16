@@ -1,0 +1,15 @@
+bin/
+.idea/
+data/
+coverage.out
+*.log
+.env
+
+# The real config may name certificate paths and endpoints; only the example
+# is committed.
+.configs/*
+deploy/compose/.env
+!.configs/.talos-discovery.yaml.example
+
+# Certificates for the compose nginx; never committed.
+deploy/compose/tls/

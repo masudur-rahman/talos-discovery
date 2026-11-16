@@ -1,0 +1,11 @@
+.git
+.github
+.idea
+bin
+data
+deploy
+e2e
+coverage.out
+*.log
+.env
+.configs

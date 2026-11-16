@@ -1,0 +1,66 @@
+# Exposure through NGINX Gateway Fabric (Gateway API). Pick this or
+# ingress-nginx.yaml, not both.
+#
+# The Gateway terminates TLS on 443 and speaks plaintext HTTP/2 (h2c) to the
+# Service. Two things decide whether KubeSpan gets the right public IPs:
+#   - the gateway's LoadBalancer Service needs externalTrafficPolicy: Local,
+#     or the client address is SNAT'ed to a node IP before nginx sees it;
+#   - nginx must pass the client address on as X-Real-IP, which the server
+#     trusts because config.yaml sets proxy.trustXRealIP.
+# Check the second with: grpcurl the Hello RPC from a known address and
+# compare client_ip, or watch talos_discovery logs at debug level.
+#
+# Watch streams sit idle for minutes between changes. Raise the gateway's
+# proxy read/send timeouts (NginxProxy / SnippetsFilter, depending on the NGF
+# version) to an hour, or every node reconnects once a minute.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: talos-discovery
+  namespace: talos-discovery
+spec:
+  gatewayClassName: nginx
+  listeners:
+    - name: grpc-tls
+      protocol: HTTPS
+      port: 443
+      hostname: discovery.example.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: talos-discovery-tls
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: talos-discovery
+  namespace: talos-discovery
+spec:
+  parentRefs:
+    - name: talos-discovery
+      sectionName: grpc-tls
+  hostnames:
+    - discovery.example.com
+  rules:
+    - backendRefs:
+        - name: talos-discovery
+          port: 3000
+---
+# The landing page, /inspect and /stats on the same hostname. GRPCRoute only
+# matches gRPC requests, so plain HTTP falls through to this.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: talos-discovery-site
+  namespace: talos-discovery
+spec:
+  parentRefs:
+    - name: talos-discovery
+      sectionName: grpc-tls
+  hostnames:
+    - discovery.example.com
+  rules:
+    - backendRefs:
+        - name: talos-discovery
+          port: 3001

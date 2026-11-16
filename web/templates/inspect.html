@@ -1,0 +1,26 @@
+{{define "inspect.html"}}{{template "head" "Inspect a cluster"}}
+<h1>Inspect a cluster</h1>
+<p class="lede">What the service holds for one cluster. <a href="/">About this service</a></p>
+
+<form method="get" action="/inspect">
+  <input type="text" name="clusterID" value="{{.ClusterID}}" placeholder="cluster id" aria-label="cluster id" autocomplete="off" spellcheck="false">
+  <button type="submit">Inspect</button>
+</form>
+<p class="muted">Find the id on a node with <code>talosctl get discoveryconfig -o yaml</code> (spec.serviceClusterID).</p>
+
+{{if .Invalid}}
+  <p>{{.Invalid}}.</p>
+{{else if .ClusterID}}
+  <h2>{{len .Affiliates}} affiliate{{if ne (len .Affiliates) 1}}s{{end}} in <span class="mono">{{.ClusterID}}</span></h2>
+  {{if not .Affiliates}}<p class="muted">Nothing is registered under this cluster id.</p>{{end}}
+  {{range .Affiliates}}
+  <div class="card">
+    <div><strong>Affiliate</strong> <span class="mono">{{.ID}}</span></div>
+    <div class="muted">Data ({{len .Data}} bytes, encrypted)</div>
+    <div class="mono">{{hex .Data}}</div>
+    <div class="muted" style="margin-top:8px">Endpoints ({{len .Endpoints}}, encrypted)</div>
+    <ul class="plain">{{range .Endpoints}}<li class="mono">{{hex .}}</li>{{end}}</ul>
+  </div>
+  {{end}}
+{{end}}
+{{template "foot"}}{{end}}

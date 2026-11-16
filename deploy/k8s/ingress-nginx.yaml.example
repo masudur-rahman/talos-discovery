@@ -1,0 +1,68 @@
+# Exposure through ingress-nginx, as an alternative to route.yaml. Rename to
+# .yaml to have `make deploy` apply it, and delete route.yaml.
+#
+# ingress-nginx sets X-Real-IP from the client address by default. Its
+# controller Service needs externalTrafficPolicy: Local for that address to be
+# the client's rather than a node's.
+#
+# backend-protocol applies to a whole Ingress, so there are two: gRPC paths go
+# to the backend as gRPC, everything else (landing page, /inspect, /stats) as
+# plain HTTP. Both reach the same port; the server tells them apart itself.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: talos-discovery
+  namespace: talos-discovery
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    # Watch streams are long-lived and quiet; the 60s default would cut them.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - discovery.example.com
+      secretName: talos-discovery-tls
+  rules:
+    - host: discovery.example.com
+      http:
+        paths:
+          - path: /sidero.discovery.server.Cluster/
+            pathType: Prefix
+            backend:
+              service:
+                name: talos-discovery
+                port:
+                  name: grpc
+          - path: /grpc.health.v1.Health/
+            pathType: Prefix
+            backend:
+              service:
+                name: talos-discovery
+                port:
+                  name: grpc
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: talos-discovery-site
+  namespace: talos-discovery
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - discovery.example.com
+      secretName: talos-discovery-tls
+  rules:
+    - host: discovery.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: talos-discovery
+                port:
+                  name: landing

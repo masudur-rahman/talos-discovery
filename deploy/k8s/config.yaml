@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: talos-discovery
+---
+# Plaintext gRPC behind an ingress or gateway that terminates TLS and sets
+# X-Real-IP. If the server is exposed directly instead, set trustXRealIP to
+# false and either keep plaintext (Talos endpoint http://...) or mount a
+# certificate and set tls.certFile / tls.keyFile.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: talos-discovery
+  namespace: talos-discovery
+data:
+  .talos-discovery.yaml: |
+    server:
+      addr: ":3000"
+      landingAddr: ":3001"
+      metricsAddr: ":2122"
+    proxy:
+      trustXRealIP: true
+    snapshot:
+      enabled: true
+      path: /app/data/state.binpb
+      interval: 5m
+    log:
+      level: info
+      format: json

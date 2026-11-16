@@ -1,0 +1,22 @@
+{{define "landing.html"}}{{template "head" "Talos discovery service"}}
+<h1>Talos discovery service</h1>
+<p class="lede">A self-hosted discovery service for Talos Linux clusters.</p>
+
+<h2>Why is something connecting to this address?</h2>
+<p>Talos nodes in your organisation use this service to find the other members of their cluster, and with KubeSpan, to set up the encrypted WireGuard mesh between them. Each node keeps one long-lived gRPC connection here and refreshes its entry every few minutes.</p>
+
+<h2>What the service can see</h2>
+<p>Nodes encrypt everything with their cluster's own key before sending it. The service stores and relays that ciphertext but cannot read it. What it does see:</p>
+<ul>
+  <li>the cluster id, a random string chosen by the cluster, used to keep clusters apart;</li>
+  <li>each node's affiliate id, also random;</li>
+  <li>how many nodes each cluster has, and the Talos version each one reports;</li>
+  <li>the source address of each connection, which it hands back to the node as its public IP.</li>
+</ul>
+<p>Entries live in memory with the lifetime each node asks for, at most 30 minutes, and disappear unless the node refreshes them. The server can also keep a snapshot on disk so a restart does not lose them.</p>
+
+<h2>How it works</h2>
+<p>Affiliate data is encrypted with AES-GCM. Endpoints are encrypted with AES in ECB mode, which is deterministic, so the same address reported by two nodes is the same ciphertext and the server can merge them without knowing what it is. Every node reports the addresses it sees its peers at; the server merges those, and streams every change to the other nodes of the same cluster, which decrypt it and configure themselves.</p>
+
+<p><a href="/inspect">Inspect a cluster</a> to see what the service holds for a cluster id.</p>
+{{template "foot"}}{{end}}

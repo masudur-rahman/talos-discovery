@@ -1,0 +1,39 @@
+# Every key is optional; the values shown are the defaults unless noted.
+# Environment variables (TALOS_DISCOVERY_*) override this file.
+server:
+    addr: ":3000"            # Talos nodes connect here (gRPC); the same port serves /, /inspect, /stats, /healthz
+    landingAddr: ":3001"     # the same pages on a port of their own; "" turns it off
+    metricsAddr: ":2122"     # Prometheus /metrics; "" turns it off
+    debugAddr: ""            # pprof + expvar, off by default; e.g. "127.0.0.1:2123"
+#    redirectEndpoint: "new-discovery.example.com:443"  # move every node to another server
+    disableClientIPReporting: false   # leave the node's address out of Hello
+
+# Leave both empty for plaintext: behind a TLS-terminating proxy, or for a
+# Talos endpoint written as http://host:port/. Files are re-read on renewal.
+tls:
+#    certFile: /etc/talos-discovery/tls/tls.crt
+#    keyFile: /etc/talos-discovery/tls/tls.key
+
+# Turn on only when every request comes through a proxy that sets the header.
+# Nodes use the address Hello returns as their public IP for KubeSpan.
+proxy:
+    trustXRealIP: false
+    trustXForwardedFor: false
+
+rateLimit:                   # per client address
+    enabled: true
+    requestsPerSecond: 15
+    burst: 60
+    maxWait: 1s              # a request over the limit waits this long before it is rejected
+
+state:
+    gcInterval: 1m
+
+snapshot:
+    enabled: true
+    path: data/state.binpb   # upstream's protobuf layout; inspect with --decode-snapshot
+    interval: 10m
+
+log:
+    level: info              # debug logs every request
+    format: text             # or json

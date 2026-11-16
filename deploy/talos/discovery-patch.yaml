@@ -1,0 +1,27 @@
+# Machine config patch pointing a Talos cluster at this server. Apply to every
+# node, control plane and workers alike:
+#   talosctl patch mc --nodes <ips> --patch @deploy/talos/discovery-patch.yaml
+# or pass it to `talosctl gen config --config-patch @...` for a new cluster.
+#
+# The scheme picks the transport:
+#   https://host/         TLS on 443 (nginx / gateway / the server's own cert)
+#   https://host:3000/    TLS straight to the server
+#   http://host:3000/     plaintext, no certificate anywhere
+cluster:
+  discovery:
+    enabled: true
+    registries:
+      kubernetes:
+        disabled: true
+      service:
+        endpoint: https://discovery.example.com/
+---
+# Only if the certificate is signed by a private CA. Talos verifies the server
+# against its own roots plus these.
+# apiVersion: v1alpha1
+# kind: TrustedRootsConfig
+# name: internal-ca
+# certificates: |-
+#   -----BEGIN CERTIFICATE-----
+#   ...
+#   -----END CERTIFICATE-----

@@ -1,0 +1,31 @@
+{{define "head"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.}}</title>
+<style>
+  :root { --fg: #1d2330; --muted: #5b6478; --bg: #fbfbfd; --card: #fff; --line: #e3e6ee; --accent: #2f6fd8; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fg: #e6e9f0; --muted: #9aa3b5; --bg: #12151c; --card: #1a1e27; --line: #2a303c; --accent: #7aa7f0; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  h2 { font-size: 1.1rem; margin: 32px 0 8px; }
+  p, li { color: var(--fg); }
+  .lede { color: var(--muted); margin-top: 0; }
+  a { color: var(--accent); }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin: 12px 0; overflow-wrap: anywhere; }
+  form { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+  input[type=text] { flex: 1 1 320px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); font: inherit; }
+  button { padding: 8px 16px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+  .muted { color: var(--muted); }
+  ul.plain { list-style: none; padding: 0; margin: 4px 0 0; }
+</style>
+</head>
+<body><main>{{end}}
+
+{{define "foot"}}</main></body></html>{{end}}
